@@ -1,26 +1,158 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --accent: #0057D9;
+  --accent-dark: #003FA3;
+  --accent-light: #EEF4FF;
+  --text-primary: #111113;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --border: #E5E7EB;
+  --surface: #F9FAFB;
+  --surface-hover: #F3F4F6;
+  --white: #FFFFFF;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background: #FFFFFF;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+
+  /* ── Buttons ─────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-[#0057D9] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[#003FA3] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-[#E5E7EB] bg-white px-6 py-3 text-sm font-semibold text-[#111113] transition-all hover:bg-[#F9FAFB] hover:border-[#D1D5DB] active:scale-[0.98] disabled:opacity-50;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-[#0057D9] px-6 py-3 text-sm font-semibold text-[#0057D9] transition-all hover:bg-[#EEF4FF] active:scale-[0.98];
+  }
+
+  /* ── Form ────────────────────────────────── */
+  .input-field {
+    @apply w-full rounded-md border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#111113] placeholder:text-[#9CA3AF] transition-all focus:border-[#0057D9] focus:outline-none focus:ring-2 focus:ring-[#0057D9]/10;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-[#374151];
+  }
+
+  /* ── Cards ───────────────────────────────── */
+  .card {
+    @apply rounded-xl border border-[#E5E7EB] bg-white transition-all;
+  }
+
+  .card-hover {
+    @apply hover:border-[#D1D5DB] hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)];
+  }
+
+  /* ── Product Card ────────────────────────── */
+  .product-card {
+    @apply rounded-xl bg-white border border-[#E5E7EB] overflow-hidden transition-all duration-300 hover:border-[#D1D5DB] hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 cursor-pointer;
+  }
+
+  /* ── Nav ─────────────────────────────────── */
+  .nav-link {
+    @apply text-sm font-medium text-[#374151] transition-colors hover:text-[#0057D9];
+  }
+
+  .nav-link-active {
+    @apply text-[#0057D9];
+  }
+
+  /* ── Badge ───────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .badge-blue {
+    @apply bg-[#EEF4FF] text-[#0057D9];
+  }
+
+  .badge-green {
+    @apply bg-[#ECFDF5] text-[#059669];
+  }
+
+  /* ── Section spacing ─────────────────────── */
+  .section {
+    @apply py-16 lg:py-24;
+  }
+
+  .section-sm {
+    @apply py-10 lg:py-16;
+  }
+
+  /* ── Divider ─────────────────────────────── */
+  .divider {
+    @apply border-t border-[#E5E7EB];
+  }
+
+}
+
+/* ── Animations ──────────────────────────────── */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+/* ── Custom scrollbar ──────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F9FAFB;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
 }
