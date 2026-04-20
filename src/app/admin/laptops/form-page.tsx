@@ -44,24 +44,31 @@ const laptopSchema = z.object({
 
 type LaptopFormValues = z.infer<typeof laptopSchema>;
 
-export default function LaptopFormPage() {
-  const { id } = useParams();
+export default function LaptopFormPage({ id: propId }: { id?: string }) {
+  const params = useParams();
+  const id = propId || params?.id as string;
   const isEdit = !!id;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
-  const { data: laptop, isLoading: isFetching } = useQuery({
+  const { data: laptop, isLoading: isFetching, isError, error: fetchError } = useQuery({
     queryKey: ['admin-laptop', id],
     queryFn: async () => {
-      const res = await api.get<Laptop>(`/admin/laptops/${id}`);
-      return res.data;
+      const res = await api.get<any>(`/laptops/${id}`);
+      // Handle both { data: laptop } and direct laptop response
+      const data = res.data?.data || res.data;
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid product data received from API');
+      }
+      return data as Laptop;
     },
-    enabled: isEdit,
+    enabled: isEdit && !!id,
+    retry: 1,
   });
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<LaptopFormValues>({
-    resolver: zodResolver(laptopSchema) as any,
+    resolver: zodResolver(laptopSchema),
     defaultValues: {
       isPublished: true,
       price: 0,
@@ -73,10 +80,14 @@ export default function LaptopFormPage() {
   });
 
   useEffect(() => {
-    if (laptop) {
+    if (laptop && Object.keys(laptop).length > 0) {
+      console.log('Populating form with laptop data:', laptop);
       reset({
-        ...laptop,
-        price: parseFloat(laptop.price),
+        title: laptop.title || '',
+        brand: laptop.brand || '',
+        model: laptop.model || '',
+        price: typeof laptop.price === 'string' ? parseFloat(laptop.price) : (typeof laptop.price === 'number' ? laptop.price : 0),
+        stock: typeof laptop.stock === 'number' ? laptop.stock : parseInt(laptop.stock as any) || 0,
         shortDescription: laptop.shortDescription || '',
         description: laptop.description || '',
         cpu: laptop.cpu || '',
@@ -86,11 +97,13 @@ export default function LaptopFormPage() {
         screenSize: laptop.screenSize || '',
         os: laptop.os || '',
         imageUrl: laptop.imageUrl || '',
+        isPublished: !!laptop.isPublished,
       });
     }
   }, [laptop, reset]);
 
   const mutation = useMutation({
+    onMutate: () => setError(null),
     mutationFn: async (data: LaptopFormValues) => {
       if (isEdit) {
         return api.patch(`/admin/laptops/${id}`, data);
@@ -100,6 +113,9 @@ export default function LaptopFormPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-laptops'] });
+      if (isEdit) {
+        queryClient.invalidateQueries({ queryKey: ['admin-laptop', id] });
+      }
       router.push('/admin/laptops');
     },
     onError: (err: any) => {
@@ -125,46 +141,61 @@ export default function LaptopFormPage() {
           <ArrowLeft className="h-4 w-4" /> Back to inventory
         </Link>
 
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-[#E5E7EB] bg-white p-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#111113]">
-              {isEdit ? 'Edit Product' : 'Add Product'}
-            </h1>
-            <p className="mt-1 text-sm text-[#6B7280]">
-              {isEdit ? 'Update product details and stock' : 'Add a new product to the catalog'}
-            </p>
+        <form 
+          onSubmit={handleSubmit((data) => mutation.mutate(data))}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
+          {/* Header */}
+          <div className="lg:col-span-3 mb-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-[#E5E7EB] bg-white p-6">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-[#111113]">
+                {isEdit ? 'Edit Product' : 'Add Product'}
+              </h1>
+              <p className="mt-1 text-sm text-[#6B7280]">
+                {isEdit ? 'Update product details and stock' : 'Add a new product to the catalog'}
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+               <label className="flex items-center gap-2 text-sm text-[#374151] cursor-pointer">
+                 <input 
+                   type="checkbox" 
+                   {...register('isPublished')}
+                   className="rounded border-[#D1D5DB] text-[#0057D9] focus:ring-[#0057D9]"
+                 />
+                 Published
+               </label>
+               <button 
+                type="submit"
+                disabled={mutation.isPending}
+                className="btn-primary"
+               >
+                  {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {isEdit ? 'Save Changes' : 'Create Product'}
+               </button>
+            </div>
           </div>
+
+          {/* Debug Info (Only visible during development or when empty) */}
+          {isEdit && !laptop && !isFetching && (
+            <div className="lg:col-span-3 mb-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-[10px] font-mono text-amber-800">
+              Debug: ID={id} | Status={isFetching ? 'Loading' : 'Idle'} | Data={laptop ? 'Found' : 'Missing'} | Error={isError ? 'Yes' : 'No'}
+            </div>
+          )}
+
+          {error && (
+            <div className="lg:col-span-3 mb-2 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
           
-          <div className="flex items-center gap-3">
-             <label className="flex items-center gap-2 text-sm text-[#374151] cursor-pointer">
-               <input 
-                 type="checkbox" 
-                 checked={isPublished}
-                 onChange={(e) => setValue('isPublished', e.target.checked)}
-                 className="rounded border-[#D1D5DB] text-[#0057D9] focus:ring-[#0057D9]"
-               />
-               Published
-             </label>
-             <button 
-              onClick={handleSubmit((data) => mutation.mutate(data))}
-              disabled={mutation.isPending}
-              className="btn-primary"
-             >
-                {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {isEdit ? 'Save Changes' : 'Create Product'}
-             </button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-6 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <p>{error}</p>
-          </div>
-        )}
-
-        <form className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {(isError || fetchError) && (
+            <div className="lg:col-span-3 mb-2 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <p>Error loading product: {(fetchError as any)?.response?.data?.message || (fetchError as any)?.message || 'Unknown error'}</p>
+            </div>
+          )}
           
           {/* Main Info Column */}
           <div className="lg:col-span-2 space-y-6">
