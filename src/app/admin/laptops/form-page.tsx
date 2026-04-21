@@ -18,11 +18,17 @@ import {
   HardDrive,
   Gamepad2,
   Settings,
-  AlertCircle
+  AlertCircle,
+  X,
+  Upload,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import axios from 'axios';
+import Image from 'next/image';
+import { CloudinarySignature } from '@/types/api';
 
 const laptopSchema = z.object({
   title: z.string().min(3, 'Title is required'),
@@ -38,7 +44,6 @@ const laptopSchema = z.object({
   gpu: z.string().optional(),
   screenSize: z.string().optional(),
   os: z.string().optional(),
-  imageUrl: z.string().optional(),
   isPublished: z.boolean().default(true),
 });
 
@@ -51,6 +56,17 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  
+  // Image states
+  const [featuredFile, setFeaturedFile] = useState<File | null>(null);
+  const [featuredPreview, setFeaturedPreview] = useState<string | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<{file: File, id: string, preview: string}[]>([]);
+  const [existingFeatured, setExistingFeatured] = useState<{url: string, publicId: string} | null>(null);
+  const [existingGallery, setExistingGallery] = useState<{url: string, publicId: string}[]>([]);
+
+  const featuredInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const { data: laptop, isLoading: isFetching, isError, error: fetchError } = useQuery({
     queryKey: ['admin-laptop', id],
@@ -96,20 +112,141 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
         gpu: laptop.gpu || '',
         screenSize: laptop.screenSize || '',
         os: laptop.os || '',
-        imageUrl: laptop.imageUrl || '',
         isPublished: !!laptop.isPublished,
       });
+
+      if (laptop.featuredImage) {
+        setExistingFeatured({
+          url: laptop.featuredImage.url,
+          publicId: laptop.featuredImage.publicId
+        });
+      }
+      
+      if (laptop.galleryImages && laptop.galleryImages.length > 0) {
+        setExistingGallery(laptop.galleryImages.map(img => ({
+          url: img.url,
+          publicId: img.publicId
+        })));
+      }
     }
   }, [laptop, reset]);
 
+  const handleFeaturedSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFeaturedFile(file);
+      setFeaturedPreview(URL.createObjectURL(file));
+      setExistingFeatured(null); // Clear existing if new one selected
+    }
+  };
+
+  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const remaining = 3 - (galleryFiles.length + existingGallery.length);
+    const toAdd = files.slice(0, remaining);
+    
+    const newItems = toAdd.map(file => ({
+      file,
+      id: Math.random().toString(36).substring(7),
+      preview: URL.createObjectURL(file)
+    }));
+    
+    setGalleryFiles(prev => [...prev, ...newItems]);
+  };
+
+  const removeGalleryFile = (id: string) => {
+    setGalleryFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const removeExistingGallery = (publicId: string) => {
+    setExistingGallery(prev => prev.filter(img => img.publicId !== publicId));
+  };
+
+  const uploadToCloudinary = async (file: File, signature: CloudinarySignature) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', signature.apiKey);
+    formData.append('timestamp', signature.timestamp.toString());
+    formData.append('signature', signature.signature);
+    formData.append('folder', signature.folder);
+    formData.append('public_id', signature.publicId);
+
+    const res = await axios.post(signature.uploadUrl, formData);
+    return {
+      url: res.data.secure_url,
+      publicId: res.data.public_id
+    };
+  };
+
   const mutation = useMutation({
-    onMutate: () => setError(null),
+    onMutate: () => {
+      setError(null);
+      setUploading(true);
+    },
+    onSettled: () => setUploading(false),
     mutationFn: async (data: LaptopFormValues) => {
+      let laptopId = id;
+      
+      // Step 1: Create or Update basic info
       if (isEdit) {
-        return api.patch(`/admin/laptops/${id}`, data);
+        await api.patch(`/admin/laptops/${id}`, data);
       } else {
-        return api.post('/admin/laptops', data);
+        const res = await api.post('/admin/laptops', data);
+        laptopId = res.data?.data?.id || res.data?.id;
       }
+
+      if (!laptopId) throw new Error('Failed to get laptop ID');
+
+      // Step 2: Handle Images
+      const slots: ('featured' | 'gallery_1' | 'gallery_2' | 'gallery_3')[] = [];
+      if (featuredFile) slots.push('featured');
+      
+      galleryFiles.forEach((_, idx) => {
+        const slotIdx = existingGallery.length + idx + 1;
+        if (slotIdx <= 3) {
+          slots.push(`gallery_${slotIdx}` as any);
+        }
+      });
+
+      if (slots.length > 0 || featuredFile || galleryFiles.length > 0 || existingFeatured || existingGallery.length >= 0) {
+        let finalFeatured = existingFeatured;
+        let finalGallery = [...existingGallery];
+
+        if (slots.length > 0) {
+          // Get signatures
+          const sigRes = await api.post(`/admin/laptops/${laptopId}/images/sign`, { slots });
+          const signatures: CloudinarySignature[] = sigRes.data?.data?.signatures || sigRes.data?.signatures || [];
+
+          // Upload new files
+          if (featuredFile) {
+            const sig = signatures.find(s => s.slot === 'featured');
+            if (sig) {
+              finalFeatured = await uploadToCloudinary(featuredFile, sig);
+            }
+          }
+
+          for (let i = 0; i < galleryFiles.length; i++) {
+            const slotName = `gallery_${existingGallery.length + i + 1}`;
+            const sig = signatures.find(s => s.slot === slotName);
+            if (sig) {
+              const uploaded = await uploadToCloudinary(galleryFiles[i].file, sig);
+              finalGallery.push(uploaded);
+            }
+          }
+        }
+
+        // Step 3: Attach images to laptop
+        // The API expects featured and gallery. If featured is missing, we might have an issue 
+        // based on the schema, but usually we should have at least one.
+        if (finalFeatured) {
+          await api.patch(`/admin/laptops/${laptopId}/images`, {
+            featured: finalFeatured,
+            gallery: finalGallery.slice(0, 3)
+          });
+        }
+      }
+
+      return laptopId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-laptops'] });
@@ -167,10 +304,10 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
                </label>
                <button 
                 type="submit"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || uploading}
                 className="btn-primary"
                >
-                  {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {mutation.isPending || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   {isEdit ? 'Save Changes' : 'Create Product'}
                </button>
             </div>
@@ -235,11 +372,107 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
 
              <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
                 <h2 className="mb-5 text-base font-semibold text-[#111113]">Media</h2>
-                <div>
-                   <label className="label">Image URL</label>
-                   <div className="relative">
-                      <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF]" />
-                      <input {...register('imageUrl')} className="input-field pl-9" placeholder="https://example.com/image.jpg" />
+                
+                <div className="space-y-6">
+                   {/* Featured Image */}
+                   <div>
+                      <label className="label">Featured Image</label>
+                      <div 
+                        onClick={() => featuredInputRef.current?.click()}
+                        className={cn(
+                          "relative aspect-video w-full cursor-pointer overflow-hidden rounded-xl border-2 border-dashed border-[#E5E7EB] bg-[#F9FAFB] hover:bg-[#F3F4F6] transition-all flex flex-col items-center justify-center gap-2",
+                          (featuredPreview || existingFeatured) && "border-solid border-transparent"
+                        )}
+                      >
+                        {(featuredPreview || existingFeatured) ? (
+                          <>
+                            <Image 
+                              src={featuredPreview || existingFeatured!.url} 
+                              alt="Featured Preview" 
+                              fill 
+                              className="object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                               <Upload className="h-8 w-8 text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="rounded-full bg-[#E5E7EB] p-3 text-[#6B7280]">
+                               <ImageIcon className="h-6 w-6" />
+                            </div>
+                            <p className="text-xs text-[#6B7280] font-medium">Click to upload featured image</p>
+                          </>
+                        )}
+                        <input 
+                          type="file" 
+                          ref={featuredInputRef} 
+                          onChange={handleFeaturedSelect} 
+                          className="hidden" 
+                          accept="image/*" 
+                        />
+                      </div>
+                   </div>
+
+                   {/* Gallery Images */}
+                   <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="label mb-0">Gallery Images (Up to 3)</label>
+                        <span className="text-[10px] text-[#6B7280] font-medium">
+                          {galleryFiles.length + existingGallery.length}/3
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        {/* Existing Gallery */}
+                        {existingGallery.map((img) => (
+                          <div key={img.publicId} className="relative aspect-square rounded-lg overflow-hidden group">
+                            <Image src={img.url} alt="Gallery" fill className="object-cover" />
+                            <button 
+                              type="button"
+                              onClick={() => removeExistingGallery(img.publicId)}
+                              className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* New Gallery Files */}
+                        {galleryFiles.map((item) => (
+                          <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden group">
+                            <Image src={item.preview} alt="Gallery Preview" fill className="object-cover" />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                               <Loader2 className="h-4 w-4 animate-spin text-white" />
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => removeGalleryFile(item.id)}
+                              className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Add Slot */}
+                        {galleryFiles.length + existingGallery.length < 3 && (
+                          <div 
+                            onClick={() => galleryInputRef.current?.click()}
+                            className="aspect-square rounded-lg border-2 border-dashed border-[#E5E7EB] bg-[#F9FAFB] hover:bg-[#F3F4F6] transition-all flex flex-col items-center justify-center cursor-pointer"
+                          >
+                             <Plus className="h-5 w-5 text-[#9CA3AF]" />
+                             <input 
+                              type="file" 
+                              ref={galleryInputRef} 
+                              onChange={handleGallerySelect} 
+                              className="hidden" 
+                              accept="image/*" 
+                              multiple 
+                             />
+                          </div>
+                        )}
+                      </div>
                    </div>
                 </div>
              </div>

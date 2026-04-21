@@ -2,6 +2,16 @@ export type Role = 'ADMIN' | 'CUSTOMER';
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
 export type PaymentMethod = 'COD';
 
+export type LaptopImageKind = 'FEATURED' | 'GALLERY';
+
+export interface LaptopImage {
+  id: string;
+  kind: LaptopImageKind;
+  url: string;
+  publicId: string;
+  position: number;
+}
+
 export interface Laptop {
   id: string;
   title: string;
@@ -18,10 +28,42 @@ export interface Laptop {
   gpu?: string | null;
   screenSize?: string | null;
   os?: string | null;
-  imageUrl?: string | null;
+  featuredImage?: LaptopImage | null;
+  galleryImages: LaptopImage[];
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// Image Upload DTOs
+export interface SignLaptopImagesDto {
+  slots?: ('featured' | 'gallery_1' | 'gallery_2' | 'gallery_3')[];
+}
+
+export interface CloudinarySignature {
+  slot: string;
+  uploadUrl: string;
+  cloudName: string;
+  apiKey: string;
+  folder: string;
+  publicId: string;
+  timestamp: number;
+  signature: string;
+}
+
+export interface SignedUploadResponse {
+  laptopId: string;
+  signatures: CloudinarySignature[];
+}
+
+export interface LaptopImageInputDto {
+  url: string;
+  publicId: string;
+}
+
+export interface SetLaptopImagesDto {
+  featured: LaptopImageInputDto;
+  gallery: LaptopImageInputDto[];
 }
 
 export interface UserPublic {
