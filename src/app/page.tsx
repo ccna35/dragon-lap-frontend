@@ -35,7 +35,7 @@ function ProductCard({ laptop, index }: { laptop: Laptop; index: number }) {
 
   return (
     <Link
-      href={`/laptops/${laptop.id}`}
+      href={`/laptops/${laptop.slug}`}
       className="product-card group flex flex-col"
     >
       {/* Image */}
@@ -48,9 +48,9 @@ function ProductCard({ laptop, index }: { laptop: Laptop; index: number }) {
             Popular
           </span>
         )}
-        {laptop.imageUrl ? (
+        {laptop.featuredImage?.url ? (
           <img
-            src={laptop.imageUrl}
+            src={laptop.featuredImage.url}
             alt={laptop.title}
             className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
           />

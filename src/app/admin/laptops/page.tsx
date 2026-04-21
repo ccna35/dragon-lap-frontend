@@ -96,8 +96,8 @@ export default function AdminLaptopsPage() {
                       <td className="py-4 pl-5 pr-3">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-[#E5E7EB] bg-[#F9FAFB] p-1">
-                            {laptop.imageUrl ? (
-                              <img src={laptop.imageUrl} alt="" className="h-full w-full object-contain" />
+                            {laptop.featuredImage?.url ? (
+                              <img src={laptop.featuredImage.url} alt="" className="h-full w-full object-contain" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
                                 <svg viewBox="0 0 40 30" className="h-5 w-5 text-[#E5E7EB]" fill="none" stroke="currentColor" strokeWidth="1.5">

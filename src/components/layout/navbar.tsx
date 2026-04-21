@@ -6,6 +6,9 @@ import { ShoppingCart, LogOut, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api-client';
+import { CartItemWithLaptop } from '@/types/api';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -13,6 +16,18 @@ export default function Navbar() {
   const isAdmin = user?.role === 'ADMIN';
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const { data: cartItems } = useQuery({
+    queryKey: ['cart'],
+    queryFn: async () => {
+      const res = await api.get<CartItemWithLaptop[]>('/cart');
+      return res.data;
+    },
+    enabled: !!user,
+  });
+
+  const cartCount = cartItems?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+  const cartUniqueCount = cartItems?.length || 0;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -82,6 +97,11 @@ export default function Navbar() {
               aria-label="Cart"
             >
               <ShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0057D9] text-[10px] font-bold text-white ring-2 ring-white animate-in zoom-in duration-300">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
             </Link>
 
             {/* User */}

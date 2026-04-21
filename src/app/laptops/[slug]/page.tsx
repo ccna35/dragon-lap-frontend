@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api-client';
 import { Laptop, CartItemWithLaptop } from '@/types/api';
-import { formatEGP } from '@/lib/utils';
+import { formatEGP, cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ShoppingCart,
@@ -26,32 +26,43 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
+import Image from 'next/image';
+import AuthModal from '@/components/auth-modal';
 
 export default function LaptopDetailPage() {
-  const { id } = useParams();
+  const { slug } = useParams();
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const { data: laptop, isLoading, error } = useQuery({
-    queryKey: ['laptop', id],
+    queryKey: ['laptop', slug],
     queryFn: async () => {
-      const res = await api.get<Laptop>(`/laptops/${id}`);
+      const res = await api.get<Laptop>(`/laptops/${slug}`);
       return res.data;
     },
   });
 
+  useEffect(() => {
+    if (laptop?.featuredImage?.url) {
+      setSelectedImage(laptop.featuredImage.url);
+    }
+  }, [laptop]);
+
   const addToCartMutation = useMutation({
     mutationFn: async () => {
       if (!user) {
-        router.push(`/auth/login?callbackUrl=/laptops/${id}`);
+        setIsAuthModalOpen(true);
         return;
       }
-      return api.post<CartItemWithLaptop>('/cart/items', { laptopId: id, quantity });
+      if (!laptop) return;
+      return api.post<CartItemWithLaptop>('/cart/items', { laptopId: laptop.id, quantity });
     },
     onSuccess: () => {
       setAdded(true);
@@ -94,6 +105,11 @@ export default function LaptopDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        callbackUrl={`/laptops/${slug}`}
+      />
       <div className="container mx-auto px-4 py-8 md:px-6">
 
         {/* Breadcrumb */}
@@ -108,13 +124,14 @@ export default function LaptopDetailPage() {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
 
           {/* Left: Image */}
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-8 lg:p-12">
-              {laptop.imageUrl ? (
-                <img
-                  src={laptop.imageUrl}
+          <div className="space-y-6">
+            <div className="relative aspect-video overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-8 lg:p-12">
+              {selectedImage ? (
+                <Image
+                  src={selectedImage}
                   alt={laptop.title}
-                  className="mx-auto h-80 w-full object-contain transition-transform duration-500 hover:scale-103"
+                  fill
+                  className="object-contain transition-transform duration-500 hover:scale-105 p-6"
                 />
               ) : (
                 <div className="flex h-80 items-center justify-center">
@@ -125,6 +142,29 @@ export default function LaptopDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* Thumbnails */}
+            {(laptop.galleryImages.length > 0 || laptop.featuredImage) && (
+                <div className="flex flex-wrap gap-3">
+                    {[laptop.featuredImage, ...laptop.galleryImages].filter(Boolean).map((img, i) => (
+                        <button
+                            key={img!.id}
+                            onClick={() => setSelectedImage(img!.url)}
+                            className={cn(
+                                "relative h-20 w-20 overflow-hidden rounded-lg border-2 transition-all",
+                                selectedImage === img!.url ? "border-[#0057D9]" : "border-[#E5E7EB] hover:border-[#D1D5DB]"
+                            )}
+                        >
+                            <Image
+                                src={img!.url}
+                                alt={`View ${i + 1}`}
+                                fill
+                                className="object-contain p-1"
+                            />
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Trust signals under image */}
             <div className="grid grid-cols-3 gap-3">

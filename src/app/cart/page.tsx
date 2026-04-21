@@ -76,8 +76,8 @@ export default function CartPage() {
                 <div key={item.id} className="flex gap-5 rounded-xl border border-[#E5E7EB] p-4">
                   {/* Image */}
                   <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-2">
-                    {item.laptop.imageUrl ? (
-                      <img src={item.laptop.imageUrl} alt={item.laptop.title} className="h-full w-full object-contain" />
+                    {item.laptop.featuredImage?.url ? (
+                      <img src={item.laptop.featuredImage.url} alt={item.laptop.title} className="h-full w-full object-contain" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
                         <ShoppingCart className="h-6 w-6 text-[#D1D5DB]" />
@@ -90,7 +90,7 @@ export default function CartPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#0057D9]">{item.laptop.brand}</p>
-                        <Link href={`/laptops/${item.laptop.id}`} className="text-sm font-semibold text-[#111113] hover:text-[#0057D9] transition-colors line-clamp-2 leading-snug">
+                        <Link href={`/laptops/${item.laptop.slug}`} className="text-sm font-semibold text-[#111113] hover:text-[#0057D9] transition-colors line-clamp-2 leading-snug">
                           {item.laptop.title}
                         </Link>
                       </div>

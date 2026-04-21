@@ -11,7 +11,7 @@ import { useState, Suspense } from 'react';
 
 function ProductCard({ laptop }: { laptop: Laptop }) {
   return (
-    <Link href={`/laptops/${laptop.id}`} className="product-card group flex flex-col">
+    <Link href={`/laptops/${laptop.slug}`} className="product-card group flex flex-col">
       <div className="relative aspect-[4/3] overflow-hidden bg-[#F9FAFB] p-5">
         {laptop.stock === 0 && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-sm">
@@ -25,9 +25,9 @@ function ProductCard({ laptop }: { laptop: Laptop }) {
             Only {laptop.stock} left
           </span>
         )}
-        {laptop.imageUrl ? (
+        {laptop.featuredImage?.url ? (
           <img
-            src={laptop.imageUrl}
+            src={laptop.featuredImage.url}
             alt={laptop.title}
             className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
