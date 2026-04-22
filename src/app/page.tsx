@@ -13,9 +13,13 @@ import {
   TrendingUp,
   Award,
   Package,
+  Gamepad2,
+  Briefcase,
+  GraduationCap,
 } from 'lucide-react';
 import { formatEGP } from '@/lib/utils';
 import { Laptop } from '@/types/api';
+import { HeroCarousel } from '@/components/home/hero-carousel';
 import api from '@/lib/api-client';
 
 async function getFeaturedLaptops(): Promise<Laptop[]> {
@@ -104,30 +108,38 @@ export default async function HomePage() {
   const categories = [
     {
       label: 'Gaming',
-      desc: 'High-refresh displays, RTX graphics',
-      icon: '🎮',
-      color: 'bg-indigo-50',
+      desc: 'RTX graphics & 240Hz screens',
+      icon: Gamepad2,
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50/50',
+      border: 'hover:border-indigo-200',
       href: '/laptops?category=gaming',
     },
     {
       label: 'Professional',
-      desc: 'Workstation-grade performance',
-      icon: '💼',
-      color: 'bg-blue-50',
+      desc: 'Reliable workstation power',
+      icon: Briefcase,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50/50',
+      border: 'hover:border-blue-200',
       href: '/laptops?category=professional',
     },
     {
       label: 'Ultrabook',
-      desc: 'Thin, light, all-day battery',
-      icon: '✈️',
-      color: 'bg-sky-50',
+      desc: 'Thin, light, all-day power',
+      icon: Monitor,
+      color: 'text-sky-600',
+      bg: 'bg-sky-50/50',
+      border: 'hover:border-sky-200',
       href: '/laptops?category=ultrabook',
     },
     {
       label: 'Student',
-      desc: 'Reliable performance, great value',
-      icon: '📚',
-      color: 'bg-green-50',
+      desc: 'Perfect balance of price & performance',
+      icon: GraduationCap,
+      color: 'text-green-600',
+      bg: 'bg-green-50/50',
+      border: 'hover:border-green-200',
       href: '/laptops?category=student',
     },
   ];
@@ -172,115 +184,7 @@ export default async function HomePage() {
     <div className="flex flex-col">
 
       {/* ─── 1. HERO ─────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-[#E5E7EB] bg-white">
-        {/* Background accent — subtle, not distracting */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-[#EEF4FF] opacity-60 blur-3xl" />
-        </div>
-
-        <div className="container relative mx-auto px-4 md:px-6">
-          <div className="grid min-h-[580px] grid-cols-1 items-center gap-12 py-16 lg:grid-cols-2 lg:py-0">
-            {/* Left */}
-            <div className="animate-fade-up max-w-lg">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-[#0057D9]" />
-                <span className="text-xs font-medium text-[#374151]">#1 Laptop Store in Egypt</span>
-              </div>
-
-              <h1 className="mb-6 text-5xl font-extrabold leading-[1.05] tracking-tight text-[#111113] md:text-6xl">
-                Find your perfect<br />
-                <span className="text-[#0057D9]">laptop.</span>
-              </h1>
-
-              <p className="mb-8 text-lg leading-relaxed text-[#6B7280]">
-                Competitive prices, genuine products, and fast delivery across Egypt. From budget ultrabooks to high-end gaming rigs — we&apos;ve got it all.
-              </p>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href="/laptops" className="btn-primary px-8 py-3.5 text-sm">
-                  Shop Now <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/laptops?sort=popular" className="btn-secondary px-8 py-3.5 text-sm">
-                  Best Sellers
-                </Link>
-              </div>
-
-              {/* Mini stats */}
-              <div className="mt-10 flex items-center gap-8 border-t border-[#E5E7EB] pt-8">
-                {[
-                  { value: '500+', label: 'Products' },
-                  { value: '10K+', label: 'Happy customers' },
-                  { value: '4.9', label: 'Avg. rating' },
-                ].map((stat) => (
-                  <div key={stat.label}>
-                    <p className="text-2xl font-bold text-[#111113]">{stat.value}</p>
-                    <p className="text-xs text-[#9CA3AF]">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right — product showcase */}
-            <div className="animate-fade-up delay-200 relative hidden lg:block">
-              <div className="relative mx-auto max-w-md">
-                {/* Main card */}
-                <div className="relative rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
-                  <div className="mb-6 flex items-center justify-between">
-                    <span className="badge badge-blue">Featured</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                      <span className="text-xs font-semibold text-[#374151]">4.9</span>
-                    </div>
-                  </div>
-                  {/* Laptop silhouette illustration */}
-                  <div className="flex items-center justify-center py-10">
-                    <div className="relative">
-                      <div className="h-44 w-72 rounded-lg border-2 border-[#D1D5DB] bg-white shadow-inner flex items-center justify-center">
-                        <div className="h-36 w-60 rounded bg-[#111113] flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="text-3xl font-black text-[#0057D9]">DL</div>
-                            <div className="text-xs text-[#6B7280] mt-1">Pro Series</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-1 h-3 w-80 -ml-4 rounded-b-xl border-2 border-[#D1D5DB] bg-[#E5E7EB]" />
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-[#374151]">Starting from</p>
-                    <p className="text-3xl font-extrabold text-[#111113]">EGP 25,000</p>
-                  </div>
-                </div>
-
-                {/* Floating badges */}
-                <div className="absolute -left-6 top-1/4 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <Package className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#111113]">Free Shipping</p>
-                      <p className="text-[10px] text-[#9CA3AF]">Nationwide</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="absolute -right-4 bottom-16 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <ShieldCheck className="h-4 w-4 text-[#0057D9]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#111113]">2-Year Warranty</p>
-                      <p className="text-[10px] text-[#9CA3AF]">All products</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroCarousel />
 
       {/* ─── 2. TRUST BAR ────────────────────────────────────────────────── */}
       <section className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
@@ -302,29 +206,38 @@ export default async function HomePage() {
       {/* ─── 3. CATEGORIES ───────────────────────────────────────────────── */}
       <section className="section border-b border-[#E5E7EB]">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="mb-10 flex items-center justify-between">
+          <div className="mb-12 flex flex-col items-center text-center md:flex-row md:items-end md:justify-between md:text-left">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-[#111113]">Shop by need</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">Find exactly what you&apos;re looking for</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#0057D9]">Our Collection</p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#111113] md:text-4xl">Shop by need</h2>
+              <p className="mt-2 text-base text-[#6B7280]">Expertly curated selections for every lifestyle</p>
             </div>
-            <Link href="/laptops" className="hidden items-center gap-1 text-sm font-medium text-[#0057D9] hover:underline md:flex">
-              View all <ChevronRight className="h-4 w-4" />
+            <Link href="/laptops" className="group mt-6 flex items-center gap-2 text-sm font-bold text-[#0057D9] md:mt-0">
+              Explore All <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {categories.map((cat) => (
               <Link
                 key={cat.label}
                 href={cat.href}
-                className={`group flex flex-col rounded-xl ${cat.color} p-6 transition-all hover:shadow-md hover:-translate-y-0.5 border border-transparent hover:border-[#D1D5DB]`}
+                className={`group relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-8 transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] ${cat.border}`}
               >
-                <span className="mb-3 text-3xl">{cat.icon}</span>
-                <p className="font-semibold text-[#111113]">{cat.label}</p>
-                <p className="mt-1 text-xs text-[#6B7280] leading-relaxed">{cat.desc}</p>
-                <span className="mt-4 flex items-center gap-1 text-xs font-medium text-[#0057D9] opacity-0 transition-opacity group-hover:opacity-100">
-                  Browse <ChevronRight className="h-3 w-3" />
-                </span>
+                {/* Accent Background */}
+                <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full ${cat.bg} transition-transform duration-500 group-hover:scale-150`} />
+                
+                <div className="relative">
+                  <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-xl ${cat.bg} ${cat.color} transition-colors group-hover:bg-white group-hover:shadow-sm`}>
+                    <cat.icon className="h-7 w-7" />
+                  </div>
+                  <h3 className="mb-2 text-xl font-bold text-[#111113]">{cat.label}</h3>
+                  <p className="text-sm leading-relaxed text-[#6B7280]">{cat.desc}</p>
+                  
+                  <div className={`mt-8 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${cat.color} opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100`}>
+                    View Collection <ArrowRight className="h-3 w-3" />
+                  </div>
+                </div>
               </Link>
             ))}
           </div>
