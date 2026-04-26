@@ -4,6 +4,15 @@ export type PaymentMethod = 'COD';
 
 export type LaptopImageKind = 'FEATURED' | 'GALLERY';
 
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LaptopImage {
   id: string;
   kind: LaptopImageKind;
@@ -28,6 +37,8 @@ export interface Laptop {
   gpu?: string | null;
   screenSize?: string | null;
   os?: string | null;
+  categoryId?: string | null;
+  category?: Category | null;
   featuredImage?: LaptopImage | null;
   galleryImages: LaptopImage[];
   isPublished: boolean;

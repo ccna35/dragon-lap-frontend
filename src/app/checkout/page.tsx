@@ -9,8 +9,9 @@ import { OrderWithItems, CartItemWithLaptop } from '@/types/api';
 import { formatEGP } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle, ChevronRight, ShieldCheck, CreditCard } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/components/providers/auth-provider';
 
 const schema = z.object({
   fullName: z.string().min(3, 'Full name required'),
@@ -46,25 +47,42 @@ export default function CheckoutPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [success, setSuccess] = useState(false);
+  const { user } = useAuth();
 
   const { data: cartItems, isLoading } = useQuery({
-    queryKey: ['cart'],
+    queryKey: ['cart', !!user],
     queryFn: async () => {
-      const res = await api.get<CartItemWithLaptop[]>('/cart');
+      const endpoint = user ? '/cart' : '/cart/guest';
+      const res = await api.get<CartItemWithLaptop[]>(endpoint);
       return res.data;
     },
   });
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
+  useEffect(() => {
+    if (user) {
+      reset({
+        fullName: user.fullName,
+        phone: user.phone ?? '',
+      });
+    }
+  }, [user, reset]);
+
   const placeOrder = useMutation({
-    mutationFn: (data: FormValues) => api.post<OrderWithItems>('/orders', data),
+    mutationFn: (data: FormValues) => {
+      const endpoint = user ? '/orders' : '/orders/guest';
+      return api.post<OrderWithItems>(endpoint, data);
+    },
     onSuccess: (res) => {
       setSuccess(true);
       queryClient.invalidateQueries({ queryKey: ['cart'] });
-      setTimeout(() => router.push(`/orders/${res.data.id}`), 2500);
+      // Only redirect logged in users to their order history
+      if (user) {
+        setTimeout(() => router.push(`/orders/${res.data.id}`), 2500);
+      }
     },
   });
 
@@ -83,8 +101,17 @@ export default function CheckoutPage() {
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
         <h1 className="text-xl font-bold text-[#111113]">Order placed!</h1>
-        <p className="mt-2 text-sm text-[#6B7280]">Redirecting you to your order details...</p>
-        <Loader2 className="mt-6 h-5 w-5 animate-spin text-[#0057D9]" />
+        <p className="mt-2 text-sm text-[#6B7280]">
+          {user 
+            ? "Redirecting you to your order details..." 
+            : "Thank you for your order! Our team will contact you soon."}
+        </p>
+        {user && <Loader2 className="mt-6 h-5 w-5 animate-spin text-[#0057D9]" />}
+        {!user && (
+          <Link href="/laptops" className="btn-primary mt-8">
+            Continue shopping
+          </Link>
+        )}
       </div>
     );
   }
@@ -120,10 +147,10 @@ export default function CheckoutPage() {
                 <Field label="Phone number" error={errors.phone?.message}>
                   <input {...register('phone')} className={`input-field ${errors.phone ? 'border-red-400' : ''}`} placeholder="010XXXXXXXX" type="tel" />
                 </Field>
+                <Field label="Alternate phone (optional)">
+                  <input {...register('alternatePhone')} className="input-field" placeholder="011XXXXXXXX" type="tel" />
+                </Field>
               </div>
-              <Field label="Alternate phone (optional)">
-                <input {...register('alternatePhone')} className="input-field" placeholder="011XXXXXXXX" type="tel" />
-              </Field>
             </FormSection>
 
             <FormSection title="Delivery address">
@@ -175,8 +202,8 @@ export default function CheckoutPage() {
                 {cartItems?.map((item) => (
                   <div key={item.id} className="flex items-center gap-3">
                     <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-1">
-                      {item.laptop.imageUrl ? (
-                        <img src={item.laptop.imageUrl} alt={item.laptop.title} className="h-full w-full object-contain" />
+                      {item.laptop.featuredImage?.url ? (
+                        <img src={item.laptop.featuredImage.url} alt={item.laptop.title} className="h-full w-full object-contain" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-[#9CA3AF]">IMG</div>
                       )}

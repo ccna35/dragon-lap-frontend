@@ -76,9 +76,16 @@ function ProductCard({ laptop, index }: { laptop: Laptop; index: number }) {
 
       {/* Info */}
       <div className="flex flex-1 flex-col p-4">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#0057D9]">
-          {laptop.brand}
-        </p>
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#0057D9]">
+            {laptop.brand}
+          </p>
+          {laptop.category && (
+            <span className="text-[10px] font-medium text-[#6B7280] bg-[#F3F4F6] px-1.5 py-0.5 rounded">
+              {laptop.category.name}
+            </span>
+          )}
+        </div>
         <h3 className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-[#111113] group-hover:text-[#0057D9] transition-colors">
           {laptop.title}
         </h3>

@@ -8,10 +8,8 @@ export function proxy(request: NextRequest) {
   // Public routes that don't need auth
   const isAuthPage = pathname.startsWith('/auth');
 
-  // Protected routes: /cart, /checkout, /orders, /account, /admin/*
+  // Protected routes: /orders (history), /account, /admin/*
   const isProtectedRoute = 
-    pathname.startsWith('/cart') || 
-    pathname.startsWith('/checkout') || 
     pathname.startsWith('/orders') || 
     pathname.startsWith('/account') || 
     pathname.startsWith('/admin');

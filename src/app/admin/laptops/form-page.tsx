@@ -1,11 +1,11 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api-client';
-import { Laptop } from '@/types/api';
+import { Laptop, Category } from '@/types/api';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
@@ -21,7 +21,9 @@ import {
   AlertCircle,
   X,
   Upload,
-  Plus
+  Plus,
+  Tag,
+  LayoutGrid
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
@@ -44,7 +46,8 @@ const laptopSchema = z.object({
   gpu: z.string().optional(),
   screenSize: z.string().optional(),
   os: z.string().optional(),
-  isPublished: z.boolean().default(true),
+  categoryId: z.string().default(''),
+  isPublished: z.boolean(),
 });
 
 type LaptopFormValues = z.infer<typeof laptopSchema>;
@@ -71,7 +74,7 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
   const { data: laptop, isLoading: isFetching, isError, error: fetchError } = useQuery({
     queryKey: ['admin-laptop', id],
     queryFn: async () => {
-      const res = await api.get<any>(`/laptops/${id}`);
+      const res = await api.get<any>(`/admin/laptops/${id}`);
       // Handle both { data: laptop } and direct laptop response
       const data = res.data?.data || res.data;
       if (!data || typeof data !== 'object') {
@@ -82,9 +85,17 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
     enabled: isEdit && !!id,
     retry: 1,
   });
+  
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await api.get<Category[]>('/categories');
+      return res.data;
+    }
+  });
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<LaptopFormValues>({
-    resolver: zodResolver(laptopSchema),
+    resolver: zodResolver(laptopSchema) as any,
     defaultValues: {
       isPublished: true,
       price: 0,
@@ -92,8 +103,16 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
       title: '',
       brand: '',
       model: '',
+      categoryId: '',
     }
   });
+
+  useEffect(() => {
+    return () => {
+      if (featuredPreview) URL.revokeObjectURL(featuredPreview);
+      galleryFiles.forEach(f => URL.revokeObjectURL(f.preview));
+    };
+  }, [featuredPreview, galleryFiles]);
 
   useEffect(() => {
     if (laptop && Object.keys(laptop).length > 0) {
@@ -102,8 +121,8 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
         title: laptop.title || '',
         brand: laptop.brand || '',
         model: laptop.model || '',
-        price: typeof laptop.price === 'string' ? parseFloat(laptop.price) : (typeof laptop.price === 'number' ? laptop.price : 0),
-        stock: typeof laptop.stock === 'number' ? laptop.stock : parseInt(laptop.stock as any) || 0,
+        price: laptop.price ? (typeof laptop.price === 'string' ? parseFloat(laptop.price) : laptop.price) : 0,
+        stock: laptop.stock != null ? (typeof laptop.stock === 'number' ? laptop.stock : parseInt(laptop.stock as any) || 0) : 0,
         shortDescription: laptop.shortDescription || '',
         description: laptop.description || '',
         cpu: laptop.cpu || '',
@@ -112,6 +131,7 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
         gpu: laptop.gpu || '',
         screenSize: laptop.screenSize || '',
         os: laptop.os || '',
+        categoryId: laptop.categoryId || '',
         isPublished: !!laptop.isPublished,
       });
 
@@ -185,17 +205,23 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
     },
     onSettled: () => setUploading(false),
     mutationFn: async (data: LaptopFormValues) => {
-      let laptopId = id;
+      // Use the actual ID from the fetched laptop data if editing, 
+      // as the 'id' from the URL might be a slug.
+      let effectiveId = isEdit ? laptop?.id : id;
+      
+      if (isEdit && !effectiveId) {
+        throw new Error('Laptop ID not found. Please wait for data to load or refresh.');
+      }
       
       // Step 1: Create or Update basic info
       if (isEdit) {
-        await api.patch(`/admin/laptops/${id}`, data);
+        await api.patch(`/admin/laptops/${effectiveId}`, data);
       } else {
         const res = await api.post('/admin/laptops', data);
-        laptopId = res.data?.data?.id || res.data?.id;
+        effectiveId = res.data?.data?.id || res.data?.id;
       }
 
-      if (!laptopId) throw new Error('Failed to get laptop ID');
+      if (!effectiveId) throw new Error('Failed to get laptop ID');
 
       // Step 2: Handle Images
       const slots: ('featured' | 'gallery_1' | 'gallery_2' | 'gallery_3')[] = [];
@@ -214,7 +240,7 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
 
         if (slots.length > 0) {
           // Get signatures
-          const sigRes = await api.post(`/admin/laptops/${laptopId}/images/sign`, { slots });
+          const sigRes = await api.post(`/admin/laptops/${effectiveId}/images/sign`, { slots });
           const signatures: CloudinarySignature[] = sigRes.data?.data?.signatures || sigRes.data?.signatures || [];
 
           // Upload new files
@@ -239,18 +265,19 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
         // The API expects featured and gallery. If featured is missing, we might have an issue 
         // based on the schema, but usually we should have at least one.
         if (finalFeatured) {
-          await api.patch(`/admin/laptops/${laptopId}/images`, {
+          await api.patch(`/admin/laptops/${effectiveId}/images`, {
             featured: finalFeatured,
             gallery: finalGallery.slice(0, 3)
           });
         }
       }
 
-      return laptopId;
+      return effectiveId;
     },
-    onSuccess: () => {
+    onSuccess: (effectiveId) => {
       queryClient.invalidateQueries({ queryKey: ['admin-laptops'] });
-      if (isEdit) {
+      queryClient.invalidateQueries({ queryKey: ['admin-laptop', effectiveId] });
+      if (id && id !== effectiveId) {
         queryClient.invalidateQueries({ queryKey: ['admin-laptop', id] });
       }
       router.push('/admin/laptops');
@@ -270,6 +297,8 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
     );
   }
 
+  const onFormSubmit: SubmitHandler<LaptopFormValues> = (data) => mutation.mutate(data);
+
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
       <div className="container mx-auto px-4 py-8 md:px-6 max-w-5xl">
@@ -279,7 +308,7 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
         </Link>
 
         <form 
-          onSubmit={handleSubmit((data) => mutation.mutate(data))}
+          onSubmit={handleSubmit(onFormSubmit)}
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
           {/* Header */}
@@ -359,6 +388,19 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
                    </div>
 
                    <div>
+                      <label className="label flex items-center gap-1.5"><LayoutGrid className="h-3.5 w-3.5 text-[#0057D9]" /> Category</label>
+                      <select 
+                        {...register('categoryId')} 
+                        className="input-field cursor-pointer bg-white"
+                      >
+                        <option value="">Uncategorized</option>
+                        {categories?.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                   </div>
+
+                   <div>
                       <label className="label">Short Description</label>
                       <input {...register('shortDescription')} className="input-field" placeholder="Brief overview of the product..." />
                    </div>
@@ -392,8 +434,20 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
                               fill 
                               className="object-cover"
                             />
-                            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                               <Upload className="h-8 w-8 text-white" />
+                            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 hover:opacity-100 gap-4">
+                               <Upload className="h-8 w-8 text-white cursor-pointer" />
+                               <button 
+                                 type="button"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setFeaturedFile(null);
+                                   setFeaturedPreview(null);
+                                   setExistingFeatured(null);
+                                 }}
+                                 className="rounded-full bg-white/20 p-2 text-white hover:bg-red-500 transition-colors"
+                               >
+                                 <X className="h-6 w-6" />
+                               </button>
                             </div>
                           </>
                         ) : (
@@ -442,9 +496,11 @@ export default function LaptopFormPage({ id: propId }: { id?: string }) {
                         {galleryFiles.map((item) => (
                           <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden group">
                             <Image src={item.preview} alt="Gallery Preview" fill className="object-cover" />
-                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                               <Loader2 className="h-4 w-4 animate-spin text-white" />
-                            </div>
+                            {uploading && (
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-white" />
+                              </div>
+                            )}
                             <button 
                               type="button"
                               onClick={() => removeGalleryFile(item.id)}

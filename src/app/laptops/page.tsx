@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api-client';
-import { Laptop } from '@/types/api';
+import { Laptop, Category } from '@/types/api';
 import { formatEGP, cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -41,7 +41,14 @@ function ProductCard({ laptop }: { laptop: Laptop }) {
         )}
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#0057D9]">{laptop.brand}</p>
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#0057D9]">{laptop.brand}</p>
+          {laptop.category && (
+            <span className="text-[10px] font-medium text-[#6B7280] bg-[#F3F4F6] px-1.5 py-0.5 rounded">
+              {laptop.category.name}
+            </span>
+          )}
+        </div>
         <h3 className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-[#111113] group-hover:text-[#0057D9] transition-colors min-h-[2.5rem]">
           {laptop.title}
         </h3>
@@ -67,17 +74,27 @@ function LaptopsCatalog() {
 
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [brand, setBrand] = useState(searchParams.get('brand') || '');
+  const [categoryId, setCategoryId] = useState(searchParams.get('categoryId') || '');
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
   const [sort, setSort] = useState(searchParams.get('sort') || 'newest');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await api.get<Category[]>('/categories');
+      return res.data;
+    },
+  });
+
   const { data: laptops, isLoading } = useQuery({
-    queryKey: ['laptops', { search, brand, minPrice, maxPrice, sort }],
+    queryKey: ['laptops', { search, brand, categoryId, minPrice, maxPrice, sort }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (brand) params.append('brand', brand);
+      if (categoryId) params.append('categoryId', categoryId);
       if (minPrice) params.append('minPrice', minPrice);
       if (maxPrice) params.append('maxPrice', maxPrice);
       if (sort) params.append('sort', sort);
@@ -90,6 +107,7 @@ function LaptopsCatalog() {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (brand) params.append('brand', brand);
+    if (categoryId) params.append('categoryId', categoryId);
     if (minPrice) params.append('minPrice', minPrice);
     if (maxPrice) params.append('maxPrice', maxPrice);
     if (sort) params.append('sort', sort);
@@ -97,7 +115,7 @@ function LaptopsCatalog() {
   };
 
   const clearFilters = () => {
-    setSearch(''); setBrand(''); setMinPrice(''); setMaxPrice(''); setSort('newest');
+    setSearch(''); setBrand(''); setCategoryId(''); setMinPrice(''); setMaxPrice(''); setSort('newest');
     router.push('/laptops');
   };
 
@@ -171,6 +189,15 @@ function LaptopsCatalog() {
                     <option value="">All brands</option>
                     {['Lenovo', 'ASUS', 'HP', 'Dell', 'MSI', 'Apple', 'Acer', 'Razer'].map(b => (
                       <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Category</label>
+                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input-field text-sm">
+                    <option value="">All categories</option>
+                    {categories?.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>

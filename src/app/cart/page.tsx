@@ -6,26 +6,34 @@ import { CartItemWithLaptop } from '@/types/api';
 import { formatEGP } from '@/lib/utils';
 import Link from 'next/link';
 import { Trash, Plus, Minus, ArrowRight, ShoppingCart, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/components/providers/auth-provider';
 
 export default function CartPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: cartItems, isLoading } = useQuery({
-    queryKey: ['cart'],
+    queryKey: ['cart', !!user],
     queryFn: async () => {
-      const res = await api.get<CartItemWithLaptop[]>('/cart');
+      const endpoint = user ? '/cart' : '/cart/guest';
+      const res = await api.get<CartItemWithLaptop[]>(endpoint);
       return res.data;
     },
   });
 
   const updateQtyMutation = useMutation({
-    mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
-      api.patch<CartItemWithLaptop>(`/cart/items/${id}`, { quantity }),
+    mutationFn: ({ id, quantity }: { id: string; quantity: number }) => {
+      const endpoint = user ? `/cart/items/${id}` : `/cart/guest/items/${id}`;
+      return api.patch<CartItemWithLaptop>(endpoint, { quantity });
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
   });
 
   const removeMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/cart/items/${id}`),
+    mutationFn: (id: string) => {
+      const endpoint = user ? `/cart/items/${id}` : `/cart/guest/items/${id}`;
+      return api.delete(endpoint);
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
   });
 

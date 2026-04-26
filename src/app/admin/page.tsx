@@ -15,7 +15,8 @@ import {
   Loader2,
   Calendar,
   Clock,
-  Package
+  Package,
+  LayoutGrid
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -83,6 +84,8 @@ export default function AdminDashboard() {
       trend: 'Needs attention',
     },
   ];
+
+  console.log(stats);
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -190,7 +193,7 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-xs font-semibold text-[#111113]">{order.user.fullName}</p>
+                        <p className="text-xs font-semibold text-[#111113]">{order.fullName}</p>
                         <p className="text-[10px] text-[#9CA3AF]">{order.city}</p>
                       </td>
                       <td className="px-6 py-4">
@@ -274,10 +277,10 @@ export default function AdminDashboard() {
             <h3 className="mb-6 font-bold text-[#111113]">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'Manage Products', href: '/admin/laptops', icon: Package },
-                { label: 'Review Orders', href: '/admin/orders', icon: ShoppingBag },
-                { label: 'Customer Base', href: '/admin/users', icon: Users },
-                { label: 'Platform Settings', href: '#', icon: ArrowUpRight },
+                { label: 'Products', href: '/admin/laptops', icon: Package },
+                { label: 'Orders', href: '/admin/orders', icon: ShoppingBag },
+                { label: 'Customers', href: '/admin/users', icon: Users },
+                { label: 'Categories', href: '/admin/categories', icon: LayoutGrid },
               ].map((action) => (
                 <Link
                   key={action.label}

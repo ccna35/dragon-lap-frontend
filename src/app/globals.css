@@ -84,6 +84,10 @@ body {
   .badge-green {
     @apply bg-[#ECFDF5] text-[#059669];
   }
+  
+  .badge-gray {
+    @apply bg-[#F3F4F6] text-[#6B7280];
+  }
 
   /* ── Section spacing ─────────────────────── */
   .section {

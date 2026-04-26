@@ -29,7 +29,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import Image from 'next/image';
-import AuthModal from '@/components/auth-modal';
 
 export default function LaptopDetailPage() {
   const { slug } = useParams();
@@ -39,7 +38,6 @@ export default function LaptopDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const { data: laptop, isLoading, error } = useQuery({
     queryKey: ['laptop', slug],
@@ -57,12 +55,9 @@ export default function LaptopDetailPage() {
 
   const addToCartMutation = useMutation({
     mutationFn: async () => {
-      if (!user) {
-        setIsAuthModalOpen(true);
-        return;
-      }
       if (!laptop) return;
-      return api.post<CartItemWithLaptop>('/cart/items', { laptopId: laptop.id, quantity });
+      const endpoint = user ? '/cart/items' : '/cart/guest/items';
+      return api.post<CartItemWithLaptop>(endpoint, { laptopId: laptop.id, quantity });
     },
     onSuccess: () => {
       setAdded(true);
@@ -105,11 +100,6 @@ export default function LaptopDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        callbackUrl={`/laptops/${slug}`}
-      />
       <div className="container mx-auto px-4 py-8 md:px-6">
 
         {/* Breadcrumb */}
@@ -184,9 +174,12 @@ export default function LaptopDetailPage() {
           {/* Right: Info */}
           <div>
             {/* Brand + rating */}
-            <div className="mb-3 flex items-center gap-3">
+            <div className="mb-3 flex items-center gap-2">
               <span className="badge badge-blue">{laptop.brand}</span>
-              <div className="flex items-center gap-1">
+              {laptop.category && (
+                <span className="badge badge-gray">{laptop.category.name}</span>
+              )}
+              <div className="flex items-center gap-1 ml-1">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
                 ))}

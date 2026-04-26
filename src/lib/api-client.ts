@@ -37,6 +37,13 @@ api.interceptors.response.use(
       !originalRequest.url?.includes('/auth/login') &&
       !originalRequest.url?.includes('/auth/refresh')
     ) {
+      // Skip refresh/redirect for guest endpoints or if already on a public path
+      const isGuestEndpoint = originalRequest.url?.includes('/guest');
+      
+      if (isGuestEndpoint) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // If already refreshing, wait for it to complete
         return new Promise((resolve, reject) => {
@@ -58,12 +65,16 @@ api.interceptors.response.use(
         isRefreshing = false;
         processQueue(refreshError);
 
-        // Optional: Notify user or redirect to login
-        // Only redirect if we're on the client side
+        // Only redirect if we're on the client side and NOT on a public path
         if (typeof window !== 'undefined') {
-          // Prevent redirect loop if already on login page
-          if (!window.location.pathname.startsWith('/auth/login')) {
-            window.location.href = `/auth/login?expired=true&callbackUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+          const pathname = window.location.pathname;
+          const publicPaths = ['/', '/laptops', '/cart', '/checkout'];
+          const isPublicPath = publicPaths.some(path => 
+            pathname === path || pathname === `${path}/` || pathname.startsWith(`${path}/`)
+          );
+
+          if (!pathname.startsWith('/auth/login') && !isPublicPath) {
+            window.location.href = `/auth/login?expired=true&callbackUrl=${encodeURIComponent(pathname + window.location.search)}`;
           }
         }
 

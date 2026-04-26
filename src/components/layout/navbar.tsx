@@ -18,16 +18,15 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const { data: cartItems } = useQuery({
-    queryKey: ['cart'],
+    queryKey: ['cart', !!user],
     queryFn: async () => {
-      const res = await api.get<CartItemWithLaptop[]>('/cart');
+      const endpoint = user ? '/cart' : '/cart/guest';
+      const res = await api.get<CartItemWithLaptop[]>(endpoint);
       return res.data;
     },
-    enabled: !!user,
   });
 
   const cartCount = cartItems?.reduce((acc, item) => acc + item.quantity, 0) || 0;
-  const cartUniqueCount = cartItems?.length || 0;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -40,7 +39,7 @@ export default function Navbar() {
     <>
       {/* Announcement Bar */}
       <div className="bg-[#0057D9] py-2 text-center text-xs font-medium text-white">
-        Free nationwide shipping on all orders · 
+        Free nationwide shipping on all orders ·
         <Link href="/laptops" className="ml-1 underline underline-offset-2 hover:no-underline">
           Shop now →
         </Link>

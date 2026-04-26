@@ -74,8 +74,9 @@ export default function AdminLaptopsPage() {
               <thead className="bg-[#F9FAFB]">
                 <tr>
                   <th className="py-3.5 pl-5 pr-3 text-left text-xs font-semibold text-[#6B7280]">Product</th>
-                  <th className="px-3 py-3.5 text-left text-xs font-semibold text-[#6B7280] hidden sm:table-cell">Brand</th>
-                  <th className="px-3 py-3.5 text-left text-xs font-semibold text-[#6B7280]">Price</th>
+                  <th className="px-3 py-3.5 text-left text-xs font-semibold text-[#111113] hidden sm:table-cell uppercase tracking-wider">Brand</th>
+                  <th className="px-3 py-3.5 text-left text-xs font-semibold text-[#111113] hidden sm:table-cell uppercase tracking-wider">Category</th>
+                  <th className="px-3 py-3.5 text-left text-xs font-semibold text-[#111113] uppercase tracking-wider">Price</th>
                   <th className="px-3 py-3.5 text-left text-xs font-semibold text-[#6B7280] hidden md:table-cell">Stock</th>
                   <th className="px-3 py-3.5 text-left text-xs font-semibold text-[#6B7280] hidden md:table-cell">Status</th>
                   <th className="relative py-3.5 pl-3 pr-5">
@@ -114,6 +115,9 @@ export default function AdminLaptopsPage() {
                         </div>
                       </td>
                       <td className="px-3 py-4 text-sm text-[#374151] hidden sm:table-cell">{laptop.brand}</td>
+                      <td className="px-3 py-4 text-sm text-[#6B7280] hidden sm:table-cell">
+                        {laptop.category?.name || <span className="text-[#9CA3AF] italic text-[11px]">Uncategorized</span>}
+                      </td>
                       <td className="px-3 py-4 text-sm font-medium text-[#111113]">{formatEGP(laptop.price)}</td>
                       <td className="px-3 py-4 hidden md:table-cell">
                         <span className={`text-sm font-medium ${laptop.stock === 0 ? 'text-red-600' : laptop.stock <= 3 ? 'text-amber-600' : 'text-[#374151]'}`}>
